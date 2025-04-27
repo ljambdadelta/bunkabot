@@ -13,11 +13,18 @@ register(bot)                    # wire up /start & echo
 
 @app.on_event("startup")
 async def on_startup():
-    """Tell Telegram where to post updates (sets the webhook)."""
+    # 1️⃣  Prepare PTB – creates dispatcher, job queue, etc.
+    await bot.initialize()
     await bot.bot.set_webhook(
         url=f"{BASE_URL}/webhook/{WEBHOOK_SECRET}",
         allowed_updates=["message", "edited_message"],
     )
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    """Gracefully tear PTB down when FastAPI stops."""
+    await bot.shutdown()
+
 
 @app.post(f"/webhook/{{token}}")
 async def telegram_webhook(token: str, request: Request):
