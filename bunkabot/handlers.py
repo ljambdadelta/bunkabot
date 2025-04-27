@@ -22,23 +22,31 @@ YOUTUBE_RE = re.compile(
 # ─── Downloader (runs in thread, returns path) ──────────────────────────
 def _dl_youtube(url: str) -> str:
     opts = {
-        "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
-        "outtmpl": "%(title).80s.%(ext)s",
+        # template must live in a dict 👉
+        "outtmpl": {"default": "%(title).80s.%(ext)s"},
+        "format": (
+            "bestvideo[ext=mp4][filesize<=50M]+bestaudio[ext=m4a]"
+            "/best[ext=mp4][filesize<=50M]/best[filesize<=50M]"
+        ),
         "noplaylist": True,
-        # Keep files reasonable for Telegram (≤ 50 MB for most users)
-        "filesize_limit": 50 * 1024 * 1024,
         "quiet": True,
     }
+
     with YoutubeDL(opts) as ydl, tempfile.TemporaryDirectory() as tmp:
+        # 1️⃣ probe (to fail fast if URL is bad)
         info = ydl.extract_info(url, download=False)
-        # overwrite output template so we always end in tmp dir
-        ydl.params["outtmpl"] = os.path.join(tmp, "%(id)s.%(ext)s")
+
+        # 2️⃣ tell yt-dlp to dump into our temp dir
+        ydl.params["outtmpl"] = {"default": os.path.join(tmp, "%(id)s.%(ext)s")}
         result = ydl.extract_info(url, download=True)
+
+        # 3️⃣ resolve actual downloaded file name
         filename = ydl.prepare_filename(result)
-        # move file outside tmp (Telegram will read after ctx switch)
+
+        # 4️⃣ move to /tmp so it survives after the TemporaryDirectory closes
         final_path = os.path.join("/tmp", os.path.basename(filename))
         os.rename(filename, final_path)
-        return final_path  # caller must unlink
+        return final_path            # caller later unlinks it
 
 # ─── New async handler ──────────────────────────────────────────────────
 async def youtube_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
