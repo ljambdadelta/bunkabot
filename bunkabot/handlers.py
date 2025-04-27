@@ -152,7 +152,7 @@ async def youtube_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await ctx.bot.send_video(
             chat_id = CHANNEL_ID,
             video = open(video_path, "rb"),
-            thumb=open(thumb_path, "rb") if thumb_path else None,
+            thumbnail=open(thumb_path, "rb") if thumb_path else None,
             caption = caption,
             parse_mode = constants.ParseMode.HTML,
         )
