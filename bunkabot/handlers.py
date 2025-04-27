@@ -3,7 +3,7 @@ from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters
 
 from bunkabot.config import *
 
-import asyncio, re, tempfile, os, logging
+import asyncio, re, tempfile, os, logging, html
 from functools import partial
 from telegram import Update, constants
 from telegram.ext import (
@@ -70,17 +70,21 @@ async def youtube_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await status_msg.edit_text(f"❌ Couldn’t download video: {exc}")
         return
 
-    # Build caption: [ORIGINAL](url)\n────────────\nrest
-    caption = f"[ORIGINAL]({url})\n" + "─" * 12
+    # --- Build caption in HTML ---
+    caption = (
+        f'<a href="{html.escape(url)}">ORIGINAL</a>\n'
+        f'{"─" * 12}'
+    )
+
     if rest:
-        caption += f"\n{rest}"
+        caption += f"\n{html.escape(rest)}"
 
     try:
         await ctx.bot.send_video(
             chat_id = CHANNEL_ID,
             video = open(video_path, "rb"),
             caption = caption,
-            parse_mode = constants.ParseMode.MARKDOWN,
+            parse_mode = constants.ParseMode.HTML,
         )
     finally:
         try:
