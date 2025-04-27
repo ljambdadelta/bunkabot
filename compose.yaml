@@ -1,0 +1,13 @@
+services:
+  bunkabot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    ports:
+      - "127.0.0.1:8443:8443"
+
+    env_file:
+      - ./bunkabot/.env             # keep your token & URL here
+
+    restart: unless-stopped
