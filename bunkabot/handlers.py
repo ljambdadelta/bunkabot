@@ -149,6 +149,11 @@ async def youtube_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             thumb_file = fh.name
 
     try:
+        if thumb_path:
+            from PIL import Image
+            s = os.path.getsize(thumb_path)
+            w, h = Image.open(thumb_path).size
+            logging.info("Thumbnail: %d B  %dx%d", s, w, h)
         await ctx.bot.send_video(
             chat_id = CHANNEL_ID,
             video = open(video_path, "rb"),
