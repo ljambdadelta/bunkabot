@@ -100,5 +100,5 @@ async def echo(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 def register(app):
     # existing /start + echo → keep
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & YOUTUBE_RE, youtube_handler))
+    app.add_handler(MessageHandler(filters.Regex(YOUTUBE_RE), youtube_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
