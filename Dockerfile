@@ -1,7 +1,7 @@
 FROM python:3.12-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential curl && \
+        build-essential curl ffmpeg  && \
     rm -rf /var/lib/apt/lists/*
 
 ENV POETRY_VERSION=2.1

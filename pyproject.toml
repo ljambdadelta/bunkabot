@@ -11,7 +11,8 @@ dependencies = [
     "python-telegram-bot[fast,future]==21.1",
     "fastapi==0.111",
     "uvicorn[standard]==0.30",
-    "python-dotenv==1.0"
+    "python-dotenv==1.0",
+    "yt-dlp ==2024.4"
 ]
 
 
