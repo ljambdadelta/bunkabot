@@ -44,7 +44,7 @@ def _shrink_thumbnail(url: str) -> str | None:
         return None
 
     # Early exit: already compliant?
-    if len(data) <= 200_000:
+    if len(data) <= 150_000:
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
         tmp.write(data)
         tmp.close()
@@ -55,14 +55,14 @@ def _shrink_thumbnail(url: str) -> str | None:
         from io import BytesIO
         img = Image.open(BytesIO(data)).convert("RGB")
 
-        img.thumbnail((320, 320))     # in-place, keeps aspect ratio
+        img.thumbnail((280, 280))     # in-place, keeps aspect ratio
 
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
         # Start at quality = 85, drop until we’re <200 kB (floor 50)
-        for q in range(85, 49, -5):
+        for q in range(85, 29, -5):
             tmp.seek(0)
             img.save(tmp, format="JPEG", quality=q, optimize=True)
-            if tmp.tell() <= 200_000:
+            if tmp.tell() <= 250_000:
                 tmp.close()
                 return tmp.name
         tmp.close()
