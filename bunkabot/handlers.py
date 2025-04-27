@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters
 
-from bunkabot.config import ALLOWED_USERS
+from bunkabot.config import *
 
 import asyncio, re, tempfile, os, logging
 from functools import partial
@@ -68,12 +68,12 @@ async def youtube_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         caption += f"\n{rest}"
 
     try:
-        await update.effective_chat.send_video(
-            video=open(video_path, "rb"),
-            caption=caption,
-            parse_mode=constants.ParseMode.MARKDOWN,
+        await ctx.bot.send_video(
+            chat_id = CHANNEL_ID,
+            video = open(video_path, "rb"),
+            caption = caption,
+            parse_mode = constants.ParseMode.MARKDOWN,
         )
-        await status_msg.delete()
     finally:
         try:
             os.remove(video_path)
