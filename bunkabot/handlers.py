@@ -14,13 +14,20 @@ from telegram.ext import (
 )
 from yt_dlp import YoutubeDL
 
+# New, looser pattern
 YOUTUBE_RE = re.compile(
-     r"(https?://(?:www\.)?"
-     r"(?:(?:youtube\.com/watch\?v=|youtu\.be/)"
-     r"(?P<id>[\w-]{11})"          # 11-char video id – kept as group "id"
-     r"[^\s]*)                     # grab the rest of the query string"
-     r")",
-     re.IGNORECASE,
+    r"(?i)"                                   # case-insensitive
+    r"(?P<url>"                               # whole URL → group “url”
+      r"(?:https?://)?"                       # scheme – optional
+      r"(?:www\.)?"                           # www. – optional
+      r"(?:"
+        r"(?:youtube\.com/"
+           r"(?:watch\?v=|shorts/)"           #  ▶ watch?v=… | shorts/…
+        r"|youtu\.be/)"                       #  ▶ youtu.be/…
+      r")"
+      r"(?P<id>[A-Za-z0-9_-]{11})"            # 11-char ID
+      r"[^\s]*"                               # anything up to next space
+    r")",
 )
 
 # ─── Downloader (runs in thread, returns path) ──────────────────────────
@@ -61,11 +68,9 @@ async def youtube_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
 
-    m = YOUTUBE_RE.search(update.message.text)
-    if not m:
-        return
+    m = ctx.matches[0]          # first (and only) regex that fired
+    url = m.group("url")
 
-    url = m.group(1)
     rest = YOUTUBE_RE.sub("", update.message.text).strip()
 
     status_msg = await update.message.reply_text("📥 Downloading…")
