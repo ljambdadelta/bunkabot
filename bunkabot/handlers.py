@@ -3,7 +3,8 @@ from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters
 
 from bunkabot.config import *
 
-import asyncio, re, tempfile, os, logging, html
+import asyncio, re, tempfile, os, logging, html, pathlib, urllib.request
+from PIL import Image
 from functools import partial
 from telegram import Update, constants
 from telegram.ext import (
@@ -29,6 +30,46 @@ YOUTUBE_RE = re.compile(
       r"[^\s]*"                               # anything up to next space
     r")",
 )
+
+# ----------------------------------------------------------------------
+def _shrink_thumbnail(url: str) -> str | None:
+    """
+    Download *url*, ensure <= 320×320 and <= 200 kB.
+    Returns a local file-path or None if anything fails.
+    """
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            data = resp.read()
+    except Exception:
+        return None
+
+    # Early exit: already compliant?
+    if len(data) <= 200_000:
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+        tmp.write(data)
+        tmp.close()
+        return tmp.name
+
+    # Otherwise re-encode with Pillow
+    try:
+        from io import BytesIO
+        img = Image.open(BytesIO(data)).convert("RGB")
+
+        img.thumbnail((320, 320))     # in-place, keeps aspect ratio
+
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+        # Start at quality = 85, drop until we’re <200 kB (floor 50)
+        for q in range(85, 49, -5):
+            tmp.seek(0)
+            img.save(tmp, format="JPEG", quality=q, optimize=True)
+            if tmp.tell() <= 200_000:
+                tmp.close()
+                return tmp.name
+        tmp.close()
+    except Exception:
+        pass
+    return None
+
 
 # ─── Downloader (runs in thread, returns path) ──────────────────────────
 def _dl_youtube(url: str) -> str:
@@ -80,6 +121,8 @@ async def youtube_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         info = await loop.run_in_executor(None, partial(_dl_youtube, url))
         video_path = info["path"]
         video_title = info["title"]
+        # prepare compliant thumbnail (runs in event-loop, fast)
+        thumb_path  = _shrink_thumbnail(info["thumb_url"]) if info["thumb_url"] else None
     except Exception as exc:
         logging.exception("yt-dlp failed:")
         await status_msg.edit_text(f"❌ Couldn’t download video: {exc}")
@@ -109,12 +152,12 @@ async def youtube_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await ctx.bot.send_video(
             chat_id = CHANNEL_ID,
             video = open(video_path, "rb"),
-            thumbnail=open(thumb_file, "rb") if thumb_file else None,
+            thumb=open(thumb_path, "rb") if thumb_path else None,
             caption = caption,
             parse_mode = constants.ParseMode.HTML,
         )
     finally:
-        for f in (video_path, thumb_file):
+        for f in (video_path, thumb_path):
             if f:
                 try:
                     os.remove(f)
